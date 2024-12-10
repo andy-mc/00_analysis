@@ -5,16 +5,23 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import yfinance as yf
-from datetime import datetime
+from datetime import datetime, timedelta
 
-def get_assets_data(start_date='2009-01-01', end_date=None):
-    if end_date is None:
-        end_date = datetime.now().strftime('%Y-%m-%d')
+def get_assets_data():
+    # Calcular las fechas
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=365)  # 365 días = 1 año
+    
+    # Convertir fechas a string en formato YYYY-MM-DD
+    start_date_str = start_date.strftime('%Y-%m-%d')
+    end_date_str = end_date.strftime('%Y-%m-%d')
+    
+    print(f"\nObteniendo datos desde {start_date_str} hasta {end_date_str}")
     
     print("Downloading Bitcoin data...")
-    btc_data = yf.download('BTC-USD', start=start_date, end=end_date)
+    btc_data = yf.download('BTC-USD', start=start_date_str, end=end_date_str)
     print("Downloading NVIDIA data...")
-    nvda_data = yf.download('NVDA', start=start_date, end=end_date)
+    nvda_data = yf.download('NVDA', start=start_date_str, end=end_date_str)
     return btc_data, nvda_data
 
 def calculate_metrics(data):
@@ -27,20 +34,27 @@ def calculate_metrics(data):
     }
     return metrics
 
-def plot_asset_prices(btc_data, nvda_data):
+def normalize_prices(data):
+    # Normalizar los precios: dividir cada precio diario entre el precio del primer día
+    data['Normalized Price'] = data['Adj Close'] / data['Adj Close'].iloc[0]
+    return data
+
+def plot_normalized_prices(btc_data, nvda_data):
+    # Graficar los precios normalizados
     plt.figure(figsize=(12, 6))
-    plt.plot(btc_data['Adj Close'], label='Bitcoin Price')
-    plt.plot(nvda_data['Adj Close'], label='NVIDIA Price')
-    plt.title('Bitcoin and NVIDIA Historical Prices')
+    plt.plot(btc_data.index, btc_data['Normalized Price'], label='Bitcoin (Normalized)')
+    plt.plot(nvda_data.index, nvda_data['Normalized Price'], label='NVIDIA (Normalized)')
+    plt.title('Normalized Prices: Bitcoin vs NVIDIA (Last Year)')
     plt.xlabel('Date')
-    plt.ylabel('Price (USD)')
+    plt.ylabel('Normalized Value')
     plt.legend()
+    plt.grid(alpha=0.5)
     
-    # Guardar el gráfico
-    plt.savefig('price_comparison.png')
-    print("\nGráfico guardado como 'price_comparison.png'")
+    # Guardar la gráfica
+    plt.savefig('normalized_price_comparison_last_year.png')
+    print("\nGráfico de precios normalizados guardado como 'normalized_price_comparison_last_year.png'")
     
-    # Mostrar el gráfico
+    # Mostrar la gráfica
     plt.show()
 
 def display_metrics_comparison(btc_metrics, nvda_metrics, btc_data, nvda_data):
@@ -75,15 +89,19 @@ def main():
         print("\nCalculating metrics...")
         btc_metrics = calculate_metrics(btc_data)
         nvda_metrics = calculate_metrics(nvda_data)
+        
+        # Normalize prices
+        btc_data = normalize_prices(btc_data)
+        nvda_data = normalize_prices(nvda_data)
 
-        # Plot the price comparison
-        plot_asset_prices(btc_data, nvda_data)
+        # Plot normalized prices
+        plot_normalized_prices(btc_data, nvda_data)
 
         # Display metrics and get the DataFrame
         metrics_df = display_metrics_comparison(btc_metrics, nvda_metrics, btc_data, nvda_data)
 
         # Export to CSV
-        csv_filename = 'comparative_metrics.csv'
+        csv_filename = 'comparative_metrics_last_year.csv'
         metrics_df.to_csv(csv_filename)
         print(f"\nMétricas guardadas en '{csv_filename}'")
 

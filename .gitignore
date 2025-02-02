@@ -1,3 +1,4 @@
 *.csv
 *.png
 stock_finder/.DS_Store
+.DS_Store
